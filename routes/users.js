@@ -4,6 +4,7 @@ const User = require('../models/User');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const authMiddleware = require('../middleware/auth');
+const { body, validationResult } = require('express-validator');
 
 
 //route pour créer un utilisateur
@@ -77,11 +78,41 @@ router.get('/', async (req, res) => {
 });
 
 
+//Update profile info 
+router.put('/updateprofile', authMiddleware, [
+    //Validation des champs (optionnel)
+    body('genre').optional().isIn(['Homme', 'Femme']).withMessage('Le genre est soit Homme soit femme'),
+    body('age').optional().isInt({ min: 0 }).withMessage('L\'age doit être un int positif'),
+    body('taille').optional().isFloat({ min: 0 }).withMessage('La taille doit être un nombre en cm'),
+    body('poids').optional().isFloat({ min: 0 }).withMessage('Le poids est en kg'),
+], async (req, res) => {
+    //erreur de validation
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+    try {
+        const { genre, age, taille, poids } = req.body;
+
+        //update user info
+        const updateUser = await User.update(
+            { genre, age, taille, poids },
+            { where: { id: req.user.id } }
+        );
+        res.json({ message: 'Profile mis a jour avec succès' });
+    } catch (err) {
+        console.error('Erreur dans la mise à jour du profile: ', err);
+        res.status(500).json({ message: 'Erreur serveur' });
+    }
+});
+
+
+
 //test de mon middleware
 
 router.get('/me', authMiddleware, async (req, res) => {
     try {
-        const user = await user.findByPk(req.user.id, {
+        const user = await User.findByPk(req.user.id, {
             attributes: ['id', 'nom', 'email'],
         });
         res.json(user);

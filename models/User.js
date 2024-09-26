@@ -24,6 +24,23 @@ const User = sequelize.define('User', {
         type: DataTypes.STRING,
         allowNull: false,
     },
+    //champs d'information (genre, age, taille,poids)
+    genre: {
+        type: DataTypes.ENUM('Homme', 'Femme'),
+        allowNull: true,
+    },
+    age: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+    },
+    taille: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+    },
+    poids: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+    },
 }, {
     tablename: 'users', //nom de la table dans la db
     timestamps: true,

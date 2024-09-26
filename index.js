@@ -27,7 +27,7 @@ sequelize.authenticate()
 });
 
 //Synchro des modèles
-sequelize.sync({ force: false }) //pour reset les tables a chaque demarrage mettre a true
+sequelize.sync({ force: true }) //pour reset les tables a chaque demarrage mettre a true
 .then(() => {
     console.log('Modèles synchronisés');
 })
