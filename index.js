@@ -1,43 +1,93 @@
+// index.js
+
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
 const app = express();
 const sequelize = require('./config/database');
-const User = require('./models/User');
 const userRoutes = require('./routes/users');
-//middleware 
+const mealRoutes = require('./routes/meals');
+const foodItemRoutes = require('./routes/foodItems');
+const errorHandler = require('./middleware/errorHandler');
+const nutritionPlanRoutes = require('./routes/nutritionPlans');
+const { User, NutritionPlan, Meal, FoodItem } = require('./models');
+const swaggerJsDoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
+const models = require('./models');
 
+const swaggerOptions = {
+    swaggerDefinition: {
+      openapi: '3.0.0',
+      info: {
+        title: 'Sport Coaching API',
+        version: '1.0.0',
+        description: 'API documentation for the Sport Coaching application',
+      },
+      servers: [
+        {
+          url: 'http://localhost:3000',
+        },
+      ],
+    },
+    apis: ['./routes/*.js'],
+  };
+  
+  const swaggerDocs = swaggerJsDoc(swaggerOptions);
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
+// Middleware
 app.use(cors());
+app.use(helmet());
 app.use(express.json());
+app.use(morgan('combined'));
+
+// Routes
 app.use('/api/users', userRoutes);
-//route
 
+// Home Route
 app.get('/', (req, res) => {
-    res.send('Backend de l\'application de sport');
+  res.send("Backend de l'application de sport");
 });
 
-// Tester la connexion a la db
+// Error Handling Middleware
+app.use(errorHandler);
 
-sequelize.authenticate()
-.then(() => {
-    console.log('connexion a la db reussi');7
-})
-.catch((err) => {
-    console.error('Impossible de se connecter a la db :', err);
+// Start Server
+const PORT = process.env.PORT || 3000;
+
+const rateLimit = require('express-rate-limit');
+
+// Apply to all requests
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Trop de requêtes depuis cette IP, veuillez réessayer plus tard.',
 });
 
-//Synchro des modèles
-sequelize.sync({ force: true }) //pour reset les tables a chaque demarrage mettre a true
-.then(() => {
+app.use(limiter);
+
+
+app.use('/api/nutrition-plans', nutritionPlanRoutes);
+app.use('/api/meals', mealRoutes);
+app.use('/api/food-items', foodItemRoutes);
+
+const startServer = async () => {
+  try {
+    await sequelize.authenticate();
+    console.log('Connexion à la base de données réussie');
+
+    // Sync models without dropping tables
+    await sequelize.sync({ alter: true });
     console.log('Modèles synchronisés');
-})
-.catch((err) => {
-    console.error('Erreur lors de la synchronisation: ', err);
-});
 
-// Démarrer le serveur
+    app.listen(PORT, () => {
+      console.log(`Serveur démarré sur le port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Erreur lors du démarrage du serveur:', error);
+  }
+};
 
-const PORT = process.env.PORT;
-app.listen(PORT, () => {
-    console.log(`Serveur démarré sur le port ${PORT}`);
-});
+startServer();

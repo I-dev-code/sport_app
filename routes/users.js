@@ -1,71 +1,29 @@
+//routes/users.js
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
 const authMiddleware = require('../middleware/auth');
+const userController = require('../controllers/userController');
 const { body, validationResult } = require('express-validator');
 
 
-//route pour créer un utilisateur
-router.post('/register', async (req,res) => {
-    try {
-        const { nom, email, motDePasse } = req.body;
+// Validation middleware
+const validateRegistration = [
+    body('nom').notEmpty().withMessage('Le nom est requis.'),
+    body('email').isEmail().withMessage('Email invalide.'),
+    body('motDePasse').isLength({ min: 6 }).withMessage('Le mot de passe doit contenir au moins 6 caractères.'),
+  ];
+  
+  const validateLogin = [
+    body('email').isEmail().withMessage('Email invalide.'),
+    body('motDePasse').exists().withMessage('Le mot de passe est requis.'),
+  ];
+  
+  // Routes
+  router.post('/register', validateRegistration, userController.register);
+  router.post('/login', validateLogin, userController.login);
 
-        //check if user exist
-        const userExists = await User.findOne({ where: { email } });
-        if (userExists) {
-            return res.status(400).json({ message: "L'utilisateur existe deéjà" });
-        }
 
-        //hasher le mdp
-        const salt = await bcrypt.genSalt(10);
-        const mdpHash = await bcrypt.hash(motDePasse, salt);
-
-        //creation du user
-        const newUser = await User.create({ nom, email, motDePasse: mdpHash, });
-        res.json({ id: newUser.id, nom: newUser.nom, email: newUser.email, });
-
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).json({message: "Erreur serveur" });
-    }
-});
-
-router.post('/login', async (req, res) => {
-    try {
-        const { email, motDePasse } = req.body;
-        //vérifié si l'utilisateur existe
-        const user = await User.findOne({ where:  { email } });
-        if (!user) {
-            return res.status(400).json({ message: "Adresse email ou mot de passe incorect." });
-        }
-
-        //vérifié si le mot de passe est correct
-        const motDePasseValide = await bcrypt.compare(motDePasse, user.motDePasse);
-        if (!motDePasseValide) {
-            return res.status(400).json({ message: "Adresse email ou mot de passe incorect." });
-        }
-
-        const token = jwt.sign(
-            { id: user.id, email: user.email },
-            process.env.JWT_SECRET,
-            { expiresIn: '1h' }
-        );
-
-        res.json({
-            token,
-            user: {
-                id: user.id,
-                nom: user.nom,
-                email: user.email,
-            },
-        });
-    } catch (err) {
-        console.error('Erreur lors  de la création: ', err);
-        res.status(500).json({ message: 'Erreur serveur' });
-    }
-});
 
 router.get('/', async (req, res) => {
     try {
@@ -78,6 +36,7 @@ router.get('/', async (req, res) => {
 });
 
 
+
 //Update profile info 
 router.put('/updateprofile', authMiddleware, [
     //Validation des champs (optionnel)
@@ -85,6 +44,7 @@ router.put('/updateprofile', authMiddleware, [
     body('age').optional().isInt({ min: 0 }).withMessage('L\'age doit être un int positif'),
     body('taille').optional().isFloat({ min: 0 }).withMessage('La taille doit être un nombre en cm'),
     body('poids').optional().isFloat({ min: 0 }).withMessage('Le poids est en kg'),
+    body('activityLevel').optional().isIn(['1','2','3','4','5']).withMessage('Votre niveau d\'activité est compris entre 1 et 5')
 ], async (req, res) => {
     //erreur de validation
     const errors = validationResult(req);
@@ -92,11 +52,11 @@ router.put('/updateprofile', authMiddleware, [
         return res.status(400).json({ errors: errors.array() });
     }
     try {
-        const { genre, age, taille, poids } = req.body;
+        const { genre, age, taille, poids, activityLevel } = req.body;
 
         //update user info
         const updateUser = await User.update(
-            { genre, age, taille, poids },
+            { genre, age, taille, poids, activityLevel },
             { where: { id: req.user.id } }
         );
         res.json({ message: 'Profile mis a jour avec succès' });
@@ -107,13 +67,12 @@ router.put('/updateprofile', authMiddleware, [
 });
 
 
-
 //test de mon middleware
 
 router.get('/me', authMiddleware, async (req, res) => {
     try {
         const user = await User.findByPk(req.user.id, {
-            attributes: ['id', 'nom', 'email'],
+            attributes: ['id', 'nom', 'email', 'genre','age','taille','poids','activityLevel'],
         });
         res.json(user);
     } catch (err) {

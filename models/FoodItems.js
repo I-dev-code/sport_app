@@ -1,66 +1,57 @@
-// models/User.js
+// models/FoodItem.js
 
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
+const Meal = require('./Meal');
 
-const User = sequelize.define('User', {
+const FoodItem = sequelize.define('FoodItem', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true,
   },
-  nom: {
+  foodName: {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  email: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    unique: true,
-    validate: {
-      isEmail: true,
-    },
-  },
-  passwordHash: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-  genre: {
-    type: DataTypes.ENUM('Homme', 'Femme'),
-    allowNull: true,
-  },
-  age: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
-    validate: {
-      min: 0,
-    },
-  },
-  taille: {
+  servingSize: {
     type: DataTypes.FLOAT,
-    allowNull: true,
+    allowNull: false,
     validate: {
       min: 0,
     },
   },
-  poids: {
+  calories: {
     type: DataTypes.FLOAT,
-    allowNull: true,
+    allowNull: false,
     validate: {
       min: 0,
     },
   },
-  activityLevel: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
+  protein: {
+    type: DataTypes.FLOAT,
+    allowNull: false,
     validate: {
-      min: 1,
-      max: 5,
+      min: 0,
+    },
+  },
+  carbs: {
+    type: DataTypes.FLOAT,
+    allowNull: false,
+    validate: {
+      min: 0,
+    },
+  },
+  fats: {
+    type: DataTypes.FLOAT,
+    allowNull: false,
+    validate: {
+      min: 0,
     },
   },
 }, {
-  tableName: 'users',
+  tableName: 'food_items',
   timestamps: true,
 });
 
-module.exports = User;
+module.exports = FoodItem;
